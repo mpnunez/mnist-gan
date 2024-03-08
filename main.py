@@ -43,7 +43,7 @@ def main():
 
 
     batch_size = 128
-    epochs = 15
+    epochs = 3
 
     model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 
