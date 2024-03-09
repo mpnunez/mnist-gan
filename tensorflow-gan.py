@@ -3,6 +3,9 @@ import keras
 from keras import layers
 from tqdm import tqdm
 
+import tensorflow as tf
+from tensorflow.summary import SummaryWriter 
+
 def main():
 
     # Import data
@@ -44,45 +47,62 @@ def main():
     generator.summary()
 
     # Combined generator + descriminator = GAN
-    gan = None
+    """
+    descriminator.trainable = False
+    gan = keras.Sequential()
+    gan.add(generator)
+    gan.add(descriminator)
+    gan.build()
+    gan.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+    print("GAN model:")
+    gan.summary()
+    """
 
     # Hyperparameters
     n_epochs = 3
     batch_size = 100
     n_real_samples = batch_size // 2
     n_fake_samples = batch_size - n_real_samples
-    batches_per_epoch = len(x_mnist) // batch_size
-    
+    batches_per_epoch = len(x_mnist) // n_real_samples
+    total_batches = n_epochs * batches_per_epoch
 
-    
+    sw = tf.summary.create_file_writer("logdir/test")
+    images_every_n_batches = 100
+    images_per_save = 9
 
-    for epoch in range(n_epochs):
-        print(f"Epoch {epoch}")
-        for batch_num in tqdm(range(batches_per_epoch)):
+    for batch_ind in tqdm(range(total_batches)):
 
-            # Real samples to train descriminator
-            first_sample = batch_num*n_real_samples
-            x_real = x_mnist[first_sample:first_sample+n_real_samples]
-            y_real = np.ones(n_real_samples)
+        batch_num = batch_ind % batches_per_epoch
 
-            # Fake samples to train descriminator
-            latent_vectors = np.random.random((n_fake_samples,latent_vector_size))
-            x_fake = generator(latent_vectors)
-            y_fake = np.zeros(n_fake_samples)
+        # Real samples to train descriminator
+        first_sample = batch_num*n_real_samples
+        x_real = x_mnist[first_sample:first_sample+n_real_samples]
+        y_real = np.ones(n_real_samples)
 
-            # Combine real and fake samples into batch
-            x_real_and_fake = np.concatenate((x_real,x_fake))
-            y_real_and_fake = np.concatenate((y_real,y_fake))
+        # Fake samples to train descriminator
+        latent_vectors = np.random.random((n_fake_samples,latent_vector_size))
+        x_fake = generator(latent_vectors)
+        y_fake = np.zeros(n_fake_samples)
 
-            # Train descriminator
-            desc_loss = descriminator.train_on_batch(x_real_and_fake,y_real_and_fake)
-            #print(f"Descriminator loss: {desc_loss}")
+        # Combine real and fake samples into batch
+        x_real_and_fake = np.concatenate((x_real,x_fake))
+        y_real_and_fake = np.concatenate((y_real,y_fake))
 
-            # Train generator through GAN
+        # Train descriminator
+        desc_loss, desc_accuracy = descriminator.train_on_batch(x_real_and_fake,y_real_and_fake)
+ 
+        # Train gan
+        y_all_real = np.ones(y_real_and_fake.shape)
+        #gan_loss = gan.train_on_batch(x_real_and_fake,y_all_real)
+        gan_loss = 0
 
-
-    #descriminator.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.1)
-    #score = descriminator.evaluate(x_test, y_test, verbose=0)
+        with sw.as_default(step=batch_ind):
+            tf.summary.scalar("descriminator-loss", desc_loss)
+            tf.summary.scalar("desc-accuracy", desc_accuracy)
+            tf.summary.scalar("gan-loss", gan_loss)
+            
+            if batch_ind % images_every_n_batches == 0:
+                tf.summary.image("fake images", x_fake[:images_per_save])
 
 
 if __name__ == "__main__":
