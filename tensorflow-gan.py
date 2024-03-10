@@ -1,9 +1,13 @@
 import numpy as np
+from tqdm import tqdm
+from datetime import datetime
+
 import keras
 from keras import layers
-from tqdm import tqdm
-
 import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import BinaryCrossentropy
+from tensorflow.keras.metrics import Accuracy
 from tensorflow.summary import SummaryWriter 
 
 def main():
@@ -46,17 +50,11 @@ def main():
     print("Generator model:")
     generator.summary()
 
-    # Combined generator + descriminator = GAN
-    """
-    descriminator.trainable = False
-    gan = keras.Sequential()
-    gan.add(generator)
-    gan.add(descriminator)
-    gan.build()
-    gan.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
-    print("GAN model:")
-    gan.summary()
-    """
+    # GAN training
+    GAN_LEARNING_RATE = 1e-3
+    gan_loss_fn = BinaryCrossentropy()
+    gan_metric_fn = Accuracy()
+    gan_optimizer= Adam(learning_rate=GAN_LEARNING_RATE)
 
     # Hyperparameters
     n_epochs = 3
@@ -66,11 +64,16 @@ def main():
     batches_per_epoch = len(x_mnist) // n_real_samples
     total_batches = n_epochs * batches_per_epoch
 
-    sw = tf.summary.create_file_writer("logdir/test")
+    curr_dt = datetime.now()
+    timestamp = int(round(curr_dt.timestamp()))
+    sw = tf.summary.create_file_writer(f"logdir/logs-{timestamp}")
     images_every_n_batches = 100
     images_per_save = 9
 
     for batch_ind in tqdm(range(total_batches)):
+
+        if batch_ind > 500:
+            break
 
         batch_num = batch_ind % batches_per_epoch
 
@@ -92,14 +95,25 @@ def main():
         desc_loss, desc_accuracy = descriminator.train_on_batch(x_real_and_fake,y_real_and_fake)
  
         # Train gan
-        y_all_real = np.ones(y_real_and_fake.shape)
-        #gan_loss = gan.train_on_batch(x_real_and_fake,y_all_real)
-        gan_loss = 0
+        
+
+        # Back-propagate through full GAN but only update generator
+        with tf.GradientTape() as tape:
+            desc_fake_predictions = descriminator(generator(latent_vectors))
+            desc_fake_predictions = desc_fake_predictions[:,0]
+            y_all_real = np.ones(n_fake_samples)
+            gan_loss = gan_loss_fn(y_all_real, desc_fake_predictions)
+            gan_accuracy = gan_metric_fn(y_all_real, desc_fake_predictions)
+ 
+        grads = tape.gradient(gan_loss, generator.trainable_variables)
+        gan_optimizer.apply_gradients(zip(grads, generator.trainable_variables))
+
 
         with sw.as_default(step=batch_ind):
             tf.summary.scalar("descriminator-loss", desc_loss)
             tf.summary.scalar("desc-accuracy", desc_accuracy)
             tf.summary.scalar("gan-loss", gan_loss)
+            tf.summary.scalar("gan-loss", gan_accuracy)
             
             if batch_ind % images_every_n_batches == 0:
                 tf.summary.image("fake images", x_fake[:images_per_save])
