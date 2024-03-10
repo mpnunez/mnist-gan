@@ -33,16 +33,18 @@ def main():
             layers.Dense(1, activation="sigmoid"),
         ]
     )
-    descriminator.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+    desc_optimizer= Adam(learning_rate=1e-3)
+    descriminator.compile(loss="binary_crossentropy", optimizer=desc_optimizer, metrics=["accuracy"])
     print("Descriminator model:")
     descriminator.summary()
 
     # Generator network
-    latent_vector_size = 10
+    latent_vector_size = 50
     generator = keras.Sequential(
         [
             keras.Input(shape=(latent_vector_size)),
-            layers.Dense(np.prod(image_shape), activation="relu"),
+            layers.Dense(512, activation="relu"),
+            layers.Dense(np.prod(image_shape), activation="sigmoid"),
             # layers.Conv2DTranspose(...)
             layers.Reshape(image_shape),
         ]
@@ -69,7 +71,7 @@ def main():
     sw = tf.summary.create_file_writer(f"logdir/logs-{timestamp}")
     images_every_n_batches = 100
     images_per_save = 9
-    latent_vectors_to_view = np.random.random((images_per_save,latent_vector_size))
+    latent_vectors_to_view = np.random.randn(images_per_save,latent_vector_size)
 
     for batch_ind in tqdm(range(total_batches)):
 
@@ -81,7 +83,7 @@ def main():
         y_real = np.ones(n_real_samples)
 
         # Fake samples to train descriminator
-        latent_vectors = np.random.random((n_fake_samples,latent_vector_size))
+        latent_vectors = np.random.randn(n_fake_samples,latent_vector_size)
         x_fake = generator(latent_vectors)
         y_fake = np.zeros(n_fake_samples)
 
@@ -92,9 +94,6 @@ def main():
         # Train descriminator
         desc_loss, desc_accuracy = descriminator.train_on_batch(x_real_and_fake,y_real_and_fake)
  
-        # Train gan
-        
-
         # Back-propagate through full GAN but only update generator
         with tf.GradientTape() as tape:
             desc_fake_predictions = descriminator(generator(latent_vectors))
@@ -111,7 +110,7 @@ def main():
             tf.summary.scalar("descriminator-loss", desc_loss)
             tf.summary.scalar("desc-accuracy", desc_accuracy)
             tf.summary.scalar("gan-loss", gan_loss)
-            tf.summary.scalar("gan-loss", gan_accuracy)
+            tf.summary.scalar("gan-accuracy", gan_accuracy)
             
             if batch_ind % images_every_n_batches == 0:
                 fake_images_to_view = generator(latent_vectors_to_view)
