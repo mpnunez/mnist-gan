@@ -40,13 +40,21 @@ def main():
 
     # Generator network
     latent_vector_size = 50
+    n_nodes = 128 * 7 * 7
     generator = keras.Sequential(
         [
-            keras.Input(shape=(latent_vector_size)),
-            layers.Dense(512, activation="relu"),
-            layers.Dense(np.prod(image_shape), activation="sigmoid"),
-            # layers.Conv2DTranspose(...)
-            layers.Reshape(image_shape),
+            # foundation for 7x7 image
+            keras.Input(shape=(latent_vector_size,)),
+            layers.Dense(n_nodes),
+            layers.LeakyReLU(alpha=0.2),
+            layers.Reshape((7, 7, 128)),
+            # upsample to 14x14
+            layers.Conv2DTranspose(128, (4,4), strides=(2,2), padding='same'),
+            layers.LeakyReLU(alpha=0.2),
+            # upsample to 28x28
+            layers.Conv2DTranspose(128, (4,4), strides=(2,2), padding='same'),
+            layers.LeakyReLU(alpha=0.2),
+            layers.Conv2D(1, (7,7), activation='sigmoid', padding='same'),
         ]
     )
     print("Generator model:")
@@ -70,7 +78,7 @@ def main():
     timestamp = int(round(curr_dt.timestamp()))
     sw = tf.summary.create_file_writer(f"logdir/logs-{timestamp}")
     images_every_n_batches = 100
-    images_per_save = 9
+    images_per_save = 4
     latent_vectors_to_view = np.random.randn(images_per_save,latent_vector_size)
 
     for batch_ind in tqdm(range(total_batches)):
