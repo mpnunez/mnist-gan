@@ -40,21 +40,15 @@ def main():
 
     # Generator network
     latent_vector_size = 50
-    n_nodes = 128 * 7 * 7
+    downsampled_size = (14,14,8)
     generator = keras.Sequential(
         [
             # foundation for 7x7 image
             keras.Input(shape=(latent_vector_size,)),
-            layers.Dense(n_nodes),
-            layers.LeakyReLU(alpha=0.2),
-            layers.Reshape((7, 7, 128)),
-            # upsample to 14x14
-            layers.Conv2DTranspose(128, (4,4), strides=(2,2), padding='same'),
-            layers.LeakyReLU(alpha=0.2),
+            layers.Dense(np.prod(downsampled_size), activation="sigmoid"),
+            layers.Reshape(downsampled_size),
             # upsample to 28x28
-            layers.Conv2DTranspose(128, (4,4), strides=(2,2), padding='same'),
-            layers.LeakyReLU(alpha=0.2),
-            layers.Conv2D(1, (7,7), activation='sigmoid', padding='same'),
+            layers.Conv2DTranspose(1, (4,4), strides=(2,2), padding='same', activation='sigmoid'),
         ]
     )
     print("Generator model:")
