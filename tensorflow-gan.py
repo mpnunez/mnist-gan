@@ -61,7 +61,7 @@ def main():
     gan_optimizer= Adam(learning_rate=GAN_LEARNING_RATE)
 
     # Hyperparameters
-    n_epochs = 3
+    n_epochs = 30
     batch_size = 100
     n_real_samples = batch_size // 2
     n_fake_samples = batch_size - n_real_samples
@@ -71,7 +71,7 @@ def main():
     curr_dt = datetime.now()
     timestamp = int(round(curr_dt.timestamp()))
     sw = tf.summary.create_file_writer(f"logdir/logs-{timestamp}")
-    images_every_n_batches = 100
+    images_every_n_batches = 500
     images_per_save = 4
     latent_vectors_to_view = np.random.randn(images_per_save,latent_vector_size)
 
@@ -117,6 +117,8 @@ def main():
             if batch_ind % images_every_n_batches == 0:
                 fake_images_to_view = generator(latent_vectors_to_view)
                 tf.summary.image("fake images", fake_images_to_view, max_outputs=images_per_save)
+                descriminator.save("descriminator.keras")
+                generator.save("generator.keras")
 
 
 if __name__ == "__main__":
