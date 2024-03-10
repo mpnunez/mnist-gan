@@ -69,11 +69,9 @@ def main():
     sw = tf.summary.create_file_writer(f"logdir/logs-{timestamp}")
     images_every_n_batches = 100
     images_per_save = 9
+    latent_vectors_to_view = np.random.random((images_per_save,latent_vector_size))
 
     for batch_ind in tqdm(range(total_batches)):
-
-        if batch_ind > 500:
-            break
 
         batch_num = batch_ind % batches_per_epoch
 
@@ -116,7 +114,8 @@ def main():
             tf.summary.scalar("gan-loss", gan_accuracy)
             
             if batch_ind % images_every_n_batches == 0:
-                tf.summary.image("fake images", x_fake[:images_per_save])
+                fake_images_to_view = generator(latent_vectors_to_view)
+                tf.summary.image("fake images", fake_images_to_view, max_outputs=images_per_save)
 
 
 if __name__ == "__main__":
