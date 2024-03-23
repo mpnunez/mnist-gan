@@ -16,7 +16,8 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 def main():
 
-    generator = load_model("generator.keras")
+    #generator = load_model("generator.keras")
+    generator = load_model("decoder.keras")
 
     n_rows = 5
     n_cols = 5

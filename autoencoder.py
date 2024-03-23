@@ -26,11 +26,11 @@ def main():
     # Descriminator network
     image_shape = x_mnist[0].shape
     img_inputs = keras.Input(shape=image_shape)
-    x = layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(img_inputs)
+    x = layers.Conv2D(8, kernel_size=(4, 4), strides=(2,2), activation="relu")(img_inputs)
     x = layers.MaxPooling2D(pool_size=(2, 2))(x)
     x = layers.Flatten()(x)
     latent_vector = layers.Dense(LATENT_VECTOR_SIZE, activation="linear")(x)
-    x = layers.Dense(np.prod(downsampled_size), activation="sigmoid")(latent_vector)
+    x = layers.Dense(np.prod(downsampled_size), activation="relu")(latent_vector)
     x = layers.Reshape(downsampled_size)(x)
     img_outputs = layers.Conv2DTranspose(1, (4,4), strides=(2,2), padding='same', activation='sigmoid')(x)
 
@@ -41,7 +41,14 @@ def main():
     for model in models:
         model.summary()
 
-    #autoencoder.fit(x_mnist,x_mnist,batch_size=64, epochs=3, validation_split=0.2)
+    autoencoder.compile(
+        loss=MeanSquaredError(),
+        optimizer=Adam(),
+    )
+
+    N_EPOCHS = 10
+    BATCH_SIZE = 64
+    autoencoder.fit(x_mnist,x_mnist,batch_size=64, epochs=N_EPOCHS, validation_split=0.2)
     for model in models:
         model.save(f"{model.name}.keras")
 
