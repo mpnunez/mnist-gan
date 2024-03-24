@@ -13,16 +13,20 @@ from keras.models import load_model
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
+import click
 
-def main():
+@click.command()
+@click.argument('generator')
+def main(generator):
 
-    #generator = load_model("generator.keras")
-    generator = load_model("decoder.keras")
+    generator = load_model(generator)
 
     n_rows = 5
     n_cols = 5
     images_to_view = n_rows * n_cols
-    latent_vector_size = 50
+    config = generator.get_config()
+    latent_vector_size = config["layers"][0]["config"]["batch_input_shape"][1]
+
     latent_vectors_to_view = np.random.randn(images_to_view,latent_vector_size)
     fake_images = generator(latent_vectors_to_view)
 
