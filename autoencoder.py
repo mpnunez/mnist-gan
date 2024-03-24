@@ -26,14 +26,14 @@ def main():
     # Descriminator network
     image_shape = x_mnist[0].shape
     img_inputs = keras.Input(shape=image_shape)
-    x = layers.Conv2D(8, kernel_size=(4, 4), strides=(2,2), activation="relu")(img_inputs)
-    x = layers.MaxPooling2D(pool_size=(2, 2))(x)
-    x = layers.Flatten()(x)
+    x = layers.Flatten()(img_inputs)
+    x = layers.Dense(128, activation="relu")(x)
+    x = layers.Dense(64, activation="relu")(x)
     latent_vector = layers.Dense(LATENT_VECTOR_SIZE, activation="linear")(x)
-    x = layers.Dense(np.prod(downsampled_size), activation="relu")(latent_vector)
-    x = layers.Reshape(downsampled_size)(x)
-    img_outputs = layers.Conv2DTranspose(1, (4,4), strides=(2,2), padding='same', activation='sigmoid')(x)
-
+    x = layers.Dense(64, activation="relu")(latent_vector)
+    x = layers.Dense(np.prod(image_shape), activation="relu")(x)
+    img_outputs = layers.Reshape(image_shape)(x)
+    
     encoder = keras.Model(inputs=img_inputs, outputs=latent_vector, name="encoder")
     decoder = keras.Model(inputs=latent_vector, outputs=img_outputs, name="decoder")
     autoencoder = keras.Model(inputs=img_inputs, outputs=img_outputs, name="autoencoder")
@@ -46,7 +46,7 @@ def main():
         optimizer=Adam(),
     )
 
-    N_EPOCHS = 10
+    N_EPOCHS = 30
     BATCH_SIZE = 64
     autoencoder.fit(x_mnist,x_mnist,batch_size=64, epochs=N_EPOCHS, validation_split=0.2)
     for model in models:
