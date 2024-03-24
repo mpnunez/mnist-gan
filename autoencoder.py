@@ -20,7 +20,7 @@ def main():
     print("x shape:", x_mnist.shape)
     print(len(x_mnist), "MNIST samples")
 
-    LATENT_VECTOR_SIZE = 50
+    LATENT_VECTOR_SIZE = 32
     downsampled_size = (14,14,8)
 
     # Descriminator network
@@ -42,7 +42,7 @@ def main():
         model.summary()
 
     autoencoder.compile(
-        loss=MeanSquaredError(),
+        loss = "binary_crossentropy",
         optimizer=Adam(),
     )
 
